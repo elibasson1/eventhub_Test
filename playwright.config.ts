@@ -5,6 +5,9 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: false,
+  // All specs share one test account and clear its bookings in beforeEach,
+  // so files must not run concurrently either.
+  workers: 1,
   retries: 0,
   reporter: 'html',
 

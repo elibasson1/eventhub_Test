@@ -34,9 +34,10 @@ export default defineConfig({
   ],
 
   // Requires DATABASE_URL in the environment and a built frontend (next build).
-  // Servers are launched with `node` directly (not `npm start`): on Windows the
-  // npm wrapper does not pass the shutdown on, so teardown hangs for minutes.
-  webServer: LOCAL_APP
+  // START_SERVERS=false: the servers are already running (Jenkins starts and
+  // stops them itself — under the Jenkins Windows service, Playwright's
+  // webServer teardown hangs for minutes after the last test).
+  webServer: LOCAL_APP && process.env.START_SERVERS !== 'false'
     ? [
         {
           command: 'node server.js',

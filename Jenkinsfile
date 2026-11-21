@@ -17,6 +17,16 @@
 //
 // Written for a Windows agent (uses `bat`).
 
+// Stops whatever is listening on the app ports (leftovers or this build's servers).
+void stopApp() {
+    powershell '''
+foreach ($port in 4000, 4001) {
+    Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
+        ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+}
+'''
+}
+
 pipeline {
     agent any
 
@@ -44,9 +54,13 @@ pipeline {
         API_PORT = '4001'
         NEXT_PUBLIC_API_URL = 'http://localhost:4001/api'
 
-        // Tell playwright.config.ts + test helpers to target the local app
-        LOCAL_APP = 'true'
-        API_URL   = 'http://localhost:4001/api'
+        // Tell playwright.config.ts + test helpers to target the local app.
+        // Jenkins starts/stops the servers itself (stage 'Start app' + post).
+        LOCAL_APP     = 'true'
+        START_SERVERS = 'false'
+        API_URL       = 'http://localhost:4001/api'
+        PORT          = '4001'
+        CORS_ORIGIN   = 'http://localhost:4000'
 
         PLAYWRIGHT_JUNIT_OUTPUT_NAME = 'test-results/junit.xml'
     }
@@ -78,9 +92,25 @@ pipeline {
             }
         }
 
+        stage('Start app') {
+            steps {
+                script { stopApp() }
+                // dontKillMe: keep the servers alive after the bat step ends;
+                // stopApp() in post stops them once the build is done.
+                withEnv(['JENKINS_NODE_COOKIE=dontKillMe']) {
+                    dir('backend') {
+                        bat 'start "" /B cmd /c "node server.js > ..\\backend.log 2>&1"'
+                    }
+                    dir('frontend') {
+                        bat 'start "" /B cmd /c "node node_modules\\next\\dist\\bin\\next start -p %WEB_PORT% > ..\\frontend.log 2>&1"'
+                    }
+                }
+                bat 'node scripts\\wait-for-url.js http://localhost:%API_PORT%/api/health http://localhost:%WEB_PORT%'
+            }
+        }
+
         stage('Run Playwright tests') {
             steps {
-                // Playwright starts backend + frontend (webServer) and stops them afterwards
                 bat 'npx playwright test --reporter=line,html,junit'
             }
         }
@@ -88,6 +118,8 @@ pipeline {
 
     post {
         always {
+            script { stopApp() }
+            archiveArtifacts artifacts: 'backend.log, frontend.log', allowEmptyArchive: true
             junit allowEmptyResults: true, testResults: 'test-results/junit.xml'
             archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
         }

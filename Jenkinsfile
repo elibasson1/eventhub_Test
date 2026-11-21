@@ -18,13 +18,11 @@
 // Written for a Windows agent (uses `bat`).
 
 // Stops whatever is listening on the app ports (leftovers or this build's servers).
+// (powershell.exe by full path: it is not on the Jenkins service's PATH.)
 void stopApp() {
-    powershell '''
-foreach ($port in 4000, 4001) {
-    Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
-        ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
-}
-'''
+    bat '%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -NoProfile -Command ' +
+        '"foreach ($p in 4000,4001) { Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue | ' +
+        'ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } }; exit 0"'
 }
 
 pipeline {

@@ -12,7 +12,7 @@
 //     (a dedicated DB — it is created/migrated/seeded on every build, so your
 //      dev `eventhub` database is never touched)
 //
-// Results: JUnit test results (trend + per-test view in Jenkins) and the
+// Results: Allure report, JUnit test results (trend + per-test view) and the
 // Playwright HTML report archived as a build artifact.
 //
 // Written for a Windows agent (uses `bat`).
@@ -109,7 +109,9 @@ pipeline {
 
         stage('Run Playwright tests') {
             steps {
-                bat 'npx playwright test --reporter=line,html,junit'
+                // The workspace is reused between builds: drop old Allure results
+                bat 'if exist allure-results rmdir /s /q allure-results'
+                bat 'npx playwright test --reporter=line,html,junit,allure-playwright'
             }
         }
     }
@@ -120,6 +122,8 @@ pipeline {
             archiveArtifacts artifacts: 'backend.log, frontend.log', allowEmptyArchive: true
             junit allowEmptyResults: true, testResults: 'test-results/junit.xml'
             archiveArtifacts artifacts: 'playwright-report/**', allowEmptyArchive: true
+            // Allure report (Jenkins tool "Allure-Pipeline", auto-installed 2.34.1)
+            allure commandline: 'Allure-Pipeline', includeProperties: false, results: [[path: 'allure-results']]
         }
     }
 }

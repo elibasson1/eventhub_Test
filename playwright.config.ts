@@ -34,10 +34,13 @@ export default defineConfig({
   ],
 
   // Requires DATABASE_URL in the environment and a built frontend (next build).
+  // Servers are launched with `node` directly (not `npm start`): on Windows the
+  // npm wrapper does not pass the shutdown on, so teardown hangs for minutes.
   webServer: LOCAL_APP
     ? [
         {
-          command: 'npm start --prefix backend',
+          command: 'node server.js',
+          cwd: 'backend',
           url: `http://localhost:${API_PORT}/api/health`,
           timeout: 60_000,
           reuseExistingServer: false,
@@ -48,7 +51,8 @@ export default defineConfig({
           },
         },
         {
-          command: `npm start --prefix frontend -- -p ${WEB_PORT}`,
+          command: `node node_modules/next/dist/bin/next start -p ${WEB_PORT}`,
+          cwd: 'frontend',
           url: `http://localhost:${WEB_PORT}`,
           timeout: 120_000,
           reuseExistingServer: false,

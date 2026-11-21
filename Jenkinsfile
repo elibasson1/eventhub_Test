@@ -25,6 +25,8 @@ pipeline {
 
     environment {
         CI = 'true'
+        // The Jenkins Windows service does not inherit Node.js on its PATH.
+        PATH = "C:\\Program Files\\nodejs;${env.PATH}"
         PLAYWRIGHT_JUNIT_OUTPUT_NAME = 'test-results/junit.xml'
     }
 

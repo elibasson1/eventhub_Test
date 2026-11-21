@@ -50,6 +50,7 @@ The README predates auth and the per-user sandbox; trust the code over the READM
 
 ## Testing
 - `playwright.config.ts` has `baseURL` pointing at the **live deployed site** (`https://eventhub.rahulshettyacademy.com`), not localhost; `fullyParallel: false`, `retries: 0`. The `playwright.yml` workflow runs the suite against production on every push to `main`.
+- `LOCAL_APP=true` (plus `DATABASE_URL`, `API_URL=http://localhost:4001/api`, a built frontend) makes Playwright start backend:4001 + frontend:4000 itself and test against localhost. The `Jenkinsfile` (local Windows Jenkins, polls GitHub) uses this with a dedicated `eventhub_ci` DB from the Jenkins credential `eventhub-ci-database-url`.
 - Test files: `tests/<feature-name>.spec.js` (JavaScript). Tests must be self-contained (login → action → assert); test account `rahulshetty1@gmail.com` / `Magiclife1!`.
 - Locator priority: `data-testid` > role > label/placeholder > id > CSS class. No `page.waitForTimeout()` — use web-first assertions.
 - Use the project skills for details: `playwright-best-practices` (test standards) and `eventhub-domain` (API reference, business rules, UI selectors, user flows under `.claude/skills/eventhub-domain/`).

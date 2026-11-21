@@ -11,10 +11,13 @@ const BASE_URL =
   process.env.BASE_URL ??
   (LOCAL_APP ? `http://localhost:${WEB_PORT}` : 'https://eventhub.rahulshettyacademy.com');
 
+// Slow-motion runs (SLOW_MO, used for headed demos) need longer timeouts.
+const SLOW = Number(process.env.SLOW_MO ?? 0) > 0;
+
 export default defineConfig({
   testDir: './tests',
-  timeout: 30_000,
-  expect: { timeout: 5_000 },
+  timeout: SLOW ? 180_000 : 30_000,
+  expect: { timeout: SLOW ? 20_000 : 5_000 },
   fullyParallel: false,
   // All specs share one test account and clear its bookings in beforeEach,
   // so files must not run concurrently either.
@@ -25,6 +28,8 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     headless: true,
+    // SLOW_MO=<ms> slows every browser action down (useful with --headed)
+    launchOptions: { slowMo: Number(process.env.SLOW_MO ?? 0) },
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },

@@ -26,7 +26,18 @@ void stopApp() {
 }
 
 pipeline {
-    agent any
+    // HEADED builds run on the "local-ui" agent (label `headed`), which runs as
+    // the logged-in Windows user, so the Chrome window shows on the desktop.
+    // Start it with C:\Users\eliba\jenkins-agent\start-agent.bat.
+    // Normal builds run on the Jenkins service (built-in node), no window.
+    agent { label "${params.HEADED ? 'headed' : 'built-in'}" }
+
+    parameters {
+        booleanParam(name: 'HEADED', defaultValue: false,
+            description: 'Show the browser on your desktop (needs the local-ui agent running)')
+        string(name: 'SLOW_MO', defaultValue: '500',
+            description: 'HEADED only: delay in ms between browser actions, so you can follow along')
+    }
 
     triggers {
         pollSCM('H/5 * * * *')
@@ -111,7 +122,15 @@ pipeline {
             steps {
                 // The workspace is reused between builds: drop old Allure results
                 bat 'if exist allure-results rmdir /s /q allure-results'
-                bat 'npx playwright test --reporter=line,html,junit,allure-playwright'
+                script {
+                    if (params.HEADED) {
+                        withEnv(["SLOW_MO=${params.SLOW_MO}"]) {
+                            bat 'npx playwright test --headed --reporter=line,html,junit,allure-playwright'
+                        }
+                    } else {
+                        bat 'npx playwright test --reporter=line,html,junit,allure-playwright'
+                    }
+                }
             }
         }
     }
